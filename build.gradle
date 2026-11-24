@@ -1,3 +1,38 @@
 plugins {
-    id 'com.android.application' version '8.5.2' apply false
+    id 'com.android.application'
+}
+
+android {
+    namespace 'app.tvmouse.tv'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'app.tvmouse.tv'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+
+    sourceSets {
+        main {
+            java.srcDir '../shared/src/main/java'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // Client ADB in puro Kotlin/JVM: serve per inviare tasti canale/spegnimento alla TV stessa.
+    implementation 'dev.mobile:dadb:1.2.10'
 }
