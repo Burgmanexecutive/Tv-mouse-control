@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TV Mouse Ricevitore</string>
+    <string name="service_description">Mostra un puntatore sullo schermo e simula tocchi e scorrimenti quando ti colleghi dal telefono con l\'app TV Mouse. Può anche inserire nel campo di testo selezionato il testo digitato sul telefono (il contenuto dei campi password non viene letto). Serve la tua autorizzazione per funzionare.</string>
+</resources>
