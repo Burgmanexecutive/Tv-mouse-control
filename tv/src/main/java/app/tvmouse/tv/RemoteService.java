@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Path;
+import android.graphics.Rect;
 import android.graphics.PixelFormat;
 import android.media.AudioManager;
 import android.os.Build;
@@ -328,6 +329,17 @@ public final class RemoteService extends AccessibilityService implements Connect
 
     private void tap(long durationMs) {
         if (cursor == null) return;
+        // Prima provo a cliccare direttamente l'elemento sotto al puntatore: sulle TV il tocco
+        // simulato spesso viene ignorato perché le app sono pensate per il telecomando.
+        boolean longPress = durationMs >= LONG_PRESS_MS;
+        AccessibilityNodeInfo target = findNodeAt(Math.round(cx), Math.round(cy),
+                longPress ? MODE_LONG : MODE_CLICK);
+        if (target != null && target.performAction(longPress
+                ? AccessibilityNodeInfo.ACTION_LONG_CLICK : AccessibilityNodeInfo.ACTION_CLICK)) {
+            showCursor();
+            return;
+        }
+        // Ripiego: tocco simulato.
         Path p = new Path();
         p.moveTo(cx, cy);
         GestureDescription g = new GestureDescription.Builder()
@@ -340,6 +352,14 @@ public final class RemoteService extends AccessibilityService implements Connect
     /** dir = +1: scorrimento come dito che va verso il basso, -1 verso l'alto. */
     private void scroll(int dir) {
         if (cursor == null) return;
+        // Prima provo a far scorrere l'elemento scorrevole sotto al puntatore; "dito verso il basso"
+        // mostra il contenuto precedente, cioè scorrimento all'indietro.
+        AccessibilityNodeInfo scrollable = findNodeAt(Math.round(cx), Math.round(cy), MODE_SCROLL);
+        if (scrollable != null && scrollable.performAction(dir > 0
+                ? AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD : AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)) {
+            showCursor();
+            return;
+        }
         DisplayMetrics dm = getResources().getDisplayMetrics();
         float maxY = dm.heightPixels - 1f;
         float dist = Math.min(dm.heightPixels * 0.35f, 420f);
@@ -385,6 +405,57 @@ public final class RemoteService extends AccessibilityService implements Connect
                 }
             });
         }
+    }
+
+    // ------------------------------------------------------------ elemento sotto al puntatore
+
+    private static final int MODE_CLICK = 0;
+    private static final int MODE_LONG = 1;
+    private static final int MODE_SCROLL = 2;
+
+    /** Elemento cliccabile (o scorrevole) sotto al punto, cercato nella finestra più in alto che lo contiene. */
+    private AccessibilityNodeInfo findNodeAt(int x, int y, int mode) {
+        List<AccessibilityWindowInfo> windows = new ArrayList<>(getWindows());
+        if (windows.isEmpty()) {
+            AccessibilityNodeInfo root = getRootInActiveWindow();
+            return root == null ? null : hitTest(root, x, y, mode, 0);
+        }
+        Collections.sort(windows, new Comparator<AccessibilityWindowInfo>() {
+            @Override
+            public int compare(AccessibilityWindowInfo a, AccessibilityWindowInfo b) {
+                return b.getLayer() - a.getLayer(); // dalla finestra più in alto
+            }
+        });
+        Rect bounds = new Rect();
+        for (AccessibilityWindowInfo w : windows) {
+            if (w.getType() == AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY) continue; // il mio puntatore
+            w.getBoundsInScreen(bounds);
+            if (!bounds.contains(x, y)) continue;
+            AccessibilityNodeInfo root = w.getRoot();
+            return root == null ? null : hitTest(root, x, y, mode, 0);
+        }
+        return null;
+    }
+
+    /** Scende fino all'elemento più interno che contiene il punto ed è cliccabile/scorrevole. */
+    private AccessibilityNodeInfo hitTest(AccessibilityNodeInfo node, int x, int y, int mode, int depth) {
+        if (node == null || depth > 40) return null;
+        Rect r = new Rect();
+        node.getBoundsInScreen(r);
+        if (!r.contains(x, y) || !node.isVisibleToUser()) return null;
+        for (int i = node.getChildCount() - 1; i >= 0; i--) {
+            AccessibilityNodeInfo found = hitTest(node.getChild(i), x, y, mode, depth + 1);
+            if (found != null) return found;
+        }
+        boolean match;
+        if (mode == MODE_CLICK) {
+            match = node.isClickable();
+        } else if (mode == MODE_LONG) {
+            match = node.isLongClickable();
+        } else {
+            match = node.isScrollable();
+        }
+        return match ? node : null;
     }
 
     // ------------------------------------------------------------ tasti, app, indirizzo MAC
