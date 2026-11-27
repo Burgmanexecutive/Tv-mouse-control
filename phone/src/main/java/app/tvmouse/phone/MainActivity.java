@@ -594,7 +594,7 @@ public final class MainActivity extends Activity {
         if (appsList == null) return;
         appsList.removeAllViews();
         if (state != RemoteClient.State.CONNECTED) {
-            appsInfo.setText("Collegati a una TV per vedere le sue app.");
+            appsInfo.setText("Collegati a una TV o a un computer per vedere le sue app.");
             return;
         }
         if (!appsLoaded) {
@@ -602,10 +602,10 @@ public final class MainActivity extends Activity {
             return;
         }
         if (apps.isEmpty()) {
-            appsInfo.setText("Nessuna app trovata sulla TV.");
+            appsInfo.setText("Nessuna app trovata.");
             return;
         }
-        appsInfo.setText(apps.size() + " app sulla TV");
+        appsInfo.setText(apps.size() + " app");
         for (int i = 0; i < apps.size(); i += 2) {
             View second = i + 1 < apps.size() ? appButton(apps.get(i + 1)) : new View(this);
             appsList.addView(row(52, appButton(apps.get(i)), second));

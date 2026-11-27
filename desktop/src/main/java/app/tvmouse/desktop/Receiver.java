@@ -58,6 +58,7 @@ public final class Receiver {
     private final File settingsFile = new File(System.getProperty("user.home"), ".tvmouse-receiver.properties");
     private final Properties settings = new Properties();
     private final Injector in;
+    private final Programs programs = new Programs();
     private final String hostName;
 
     private volatile boolean requirePin;
@@ -398,8 +399,16 @@ public final class Receiver {
                     else scheduleShutdown(m * 60);
                 }
                 break;
-            case "APPS":
-                s.send("APPSEND"); // sul computer non c'e' un elenco di app da avviare
+            case "APPS": {
+                for (Programs.Item it : programs.refresh()) {
+                    String label = it.name.length() > 40 ? it.name.substring(0, 40) : it.name;
+                    s.send("APP|" + it.id + "|" + Base64.getEncoder().encodeToString(label.getBytes(StandardCharsets.UTF_8)));
+                }
+                s.send("APPSEND");
+                break;
+            }
+            case "LAUNCH":
+                if (a.length >= 2) programs.launch(a[1]);
                 break;
             default:
                 break;

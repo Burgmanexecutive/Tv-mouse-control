@@ -54,17 +54,25 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Compila il programma per PC (JAR eseguibile)
+      - name: Compila i programmi per PC (JAR eseguibili)
         run: |
-          mkdir -p out dist
+          mkdir -p out dist-controllo dist-ricevitore
           javac --release 11 -d out shared/src/main/java/app/tvmouse/common/*.java desktop/src/main/java/app/tvmouse/desktop/*.java
-          printf 'Main-Class: app.tvmouse.desktop.Main\n' > manifest.txt
-          jar --create --file dist/TvMouse-PC.jar --manifest manifest.txt -C out .
+          printf 'Main-Class: app.tvmouse.desktop.Main\n' > manifest1.txt
+          jar --create --file dist-controllo/TvMouse-PC.jar --manifest manifest1.txt -C out .
+          cp desktop/Avvia-TvMouse.* dist-controllo/
           printf 'Main-Class: app.tvmouse.desktop.Receiver\n' > manifest2.txt
-          jar --create --file dist/TvMouse-Ricevitore-PC.jar --manifest manifest2.txt -C out .
-          cp desktop/Avvia-* dist/
+          jar --create --file dist-ricevitore/TvMouse-Ricevitore-PC.jar --manifest manifest2.txt -C out .
+          cp desktop/Avvia-Ricevitore-PC.* dist-ricevitore/
 
+      # PC che comanda la TV
       - uses: actions/upload-artifact@v6
         with:
-          name: tvmouse-pc
-          path: dist/*
+          name: tvmouse-pc-controlla-tv
+          path: dist-controllo/*
+
+      # PC comandato dal telefono
+      - uses: actions/upload-artifact@v6
+        with:
+          name: tvmouse-pc-ricevitore
+          path: dist-ricevitore/*

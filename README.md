@@ -79,7 +79,7 @@ La TV accetta un solo telefono alla volta. Se un secondo telefono si collega, il
 
 Oltre al telefono puoi comandare la TV dal computer, con lo stesso PIN e la stessa cifratura.
 
-1. Scarica da **Actions > ultima esecuzione > Artifacts** il pacchetto `tvmouse-pc` e decomprimilo.
+1. Scarica da **Actions > ultima esecuzione > Artifacts** il pacchetto `tvmouse-pc-controlla-tv` e decomprimilo.
 2. Serve Java 11 o successivo (gratis da https://adoptium.net).
 3. Avvia con `Avvia-TvMouse.bat` (Windows), `Avvia-TvMouse.command` (macOS, doppio clic) o `Avvia-TvMouse.sh` (Linux). In alternativa: `java -jar TvMouse-PC.jar`.
 4. Premi **Cerca TV** (oppure scrivi l'IP mostrato sulla TV), inserisci il PIN e premi **Connetti**. Il programma ricorda l'ultima TV.
@@ -92,9 +92,11 @@ Comandi: trascina nel trackpad per muovere il puntatore, clic = tocco, tieni pre
 
 L'app del telefono può comandare anche un computer, non solo la TV: sul computer gira il "ricevitore", che al posto della TV riceve i comandi.
 
-1. Dal pacchetto `tvmouse-pc` (Actions > Artifacts) avvia `Avvia-Ricevitore-PC.bat` (Windows), `Avvia-Ricevitore-PC.command` (macOS) o `Avvia-Ricevitore-PC.sh` (Linux). Serve Java 11 o successivo.
+1. Dal pacchetto `tvmouse-pc-ricevitore` (Actions > Artifacts) avvia `Avvia-Ricevitore-PC.bat` (Windows), `Avvia-Ricevitore-PC.command` (macOS) o `Avvia-Ricevitore-PC.sh` (Linux). Serve Java 11 o successivo.
 2. La finestra mostra l'indirizzo IP del computer e un PIN. Se il firewall lo chiede, consenti a Java l'accesso alla rete privata.
 3. Sul telefono: **TV > Aggiungi o cerca una TV**. Il computer compare nell'elenco; inserisci il PIN.
+
+Nella scheda **App** del telefono compare l'elenco dei programmi installati sul computer (menu Start su Windows, cartelle Applicazioni su macOS, voci di menu su Linux): toccane uno per avviarlo. Il telefono può avviare solo programmi presenti nell'elenco.
 
 Cosa fanno i tasti sul computer: trackpad = mouse (tocco = clic sinistro, pressione lunga = clic destro), scorrimento, Indietro = Alt+Freccia sinistra (macOS: Cmd+[), Home = tasto Windows, CH +/- = Pag su/giù, frecce/OK/Menu/numeri = tastiera, testo dal telefono (anche accenti), Volume e Muto (Windows, macOS, Linux con `pactl` o `amixer`), Play/Pausa e brani (Windows, Linux con `playerctl`).
 **Spegni** spegne il computer dopo 30 secondi, e il **Timer** dopo i minuti scelti; si annulla dalla finestra del ricevitore o dal telefono (Timer > Annulla).
