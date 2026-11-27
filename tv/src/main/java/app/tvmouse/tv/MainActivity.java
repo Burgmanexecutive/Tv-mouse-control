@@ -52,8 +52,6 @@ public final class MainActivity extends Activity {
 
         root.addView(text("TV Mouse - ricevitore", 34));
         ipView = text("", 24);
-        ipView.setTextColor(Color.parseColor("#FFEA00")); // giallo acceso: l'IP si legge bene da lontano
-        ipView.setTypeface(ipView.getTypeface(), android.graphics.Typeface.BOLD);
         pinView = text("", 40);
         serviceView = text("", 24);
         adbView = text("", 22);
@@ -127,7 +125,14 @@ public final class MainActivity extends Activity {
 
     private void updateStatus() {
         List<String> ips = NetUtil.localIps();
-        ipView.setText("Indirizzo IP della TV: " + (ips.isEmpty() ? "nessuna rete" : join(ips)));
+        String label = "Indirizzo IP della TV: ";
+        String value = ips.isEmpty() ? "nessuna rete" : join(ips);
+        android.text.SpannableString ipText = new android.text.SpannableString(label + value);
+        ipText.setSpan(new android.text.style.ForegroundColorSpan(Color.parseColor("#FFEA00")),
+                label.length(), ipText.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        ipText.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
+                label.length(), ipText.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        ipView.setText(ipText); // etichetta bianca, solo i numeri in giallo acceso
         boolean needPin = Prefs.requirePin(this);
         pinView.setText(needPin
                 ? "PIN: " + Prefs.pin(this)
