@@ -88,6 +88,19 @@ Il PC deve essere nella stessa rete della TV (anche l'hotspot del telefono va be
 
 Comandi: trascina nel trackpad per muovere il puntatore, clic = tocco, tieni premuto = pressione lunga, rotellina = scorri, tasto destro = Indietro. Con il focus fuori dalle caselle di testo, frecce / Invio / Esc / Home / PagSu / PagGiù della tastiera comandano la TV. Le schede Frecce, Numeri e App e la casella di scrittura funzionano come sul telefono.
 
+## 4c. Controllare un PC o un notebook dal telefono
+
+L'app del telefono può comandare anche un computer, non solo la TV: sul computer gira il "ricevitore", che al posto della TV riceve i comandi.
+
+1. Dal pacchetto `tvmouse-pc` (Actions > Artifacts) avvia `Avvia-Ricevitore-PC.bat` (Windows), `Avvia-Ricevitore-PC.command` (macOS) o `Avvia-Ricevitore-PC.sh` (Linux). Serve Java 11 o successivo.
+2. La finestra mostra l'indirizzo IP del computer e un PIN. Se il firewall lo chiede, consenti a Java l'accesso alla rete privata.
+3. Sul telefono: **TV > Aggiungi o cerca una TV**. Il computer compare nell'elenco; inserisci il PIN.
+
+Cosa fanno i tasti sul computer: trackpad = mouse (tocco = clic sinistro, pressione lunga = clic destro), scorrimento, Indietro = Alt+Freccia sinistra (macOS: Cmd+[), Home = tasto Windows, CH +/- = Pag su/giù, frecce/OK/Menu/numeri = tastiera, testo dal telefono (anche accenti), Volume e Muto (Windows, macOS, Linux con `pactl` o `amixer`), Play/Pausa e brani (Windows, Linux con `playerctl`).
+**Spegni** spegne il computer dopo 30 secondi, e il **Timer** dopo i minuti scelti; si annulla dalla finestra del ricevitore o dal telefono (Timer > Annulla).
+
+Note: su macOS serve concedere a Java il permesso "Accessibilità" (Impostazioni di sistema > Privacy e sicurezza). Su Linux il controllo del mouse funziona con X11, non con Wayland. Tieni il PIN attivo: chi lo conosce può comandare e spegnere il computer.
+
 ## 5. Cosa funziona senza ADB e cosa no
 
 | Funzione | Senza ADB | Con ADB attivo sulla TV |

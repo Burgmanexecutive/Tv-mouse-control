@@ -60,7 +60,9 @@ jobs:
           javac --release 11 -d out shared/src/main/java/app/tvmouse/common/*.java desktop/src/main/java/app/tvmouse/desktop/*.java
           printf 'Main-Class: app.tvmouse.desktop.Main\n' > manifest.txt
           jar --create --file dist/TvMouse-PC.jar --manifest manifest.txt -C out .
-          cp desktop/Avvia-TvMouse.bat desktop/Avvia-TvMouse.command desktop/Avvia-TvMouse.sh dist/
+          printf 'Main-Class: app.tvmouse.desktop.Receiver\n' > manifest2.txt
+          jar --create --file dist/TvMouse-Ricevitore-PC.jar --manifest manifest2.txt -C out .
+          cp desktop/Avvia-* dist/
 
       - uses: actions/upload-artifact@v6
         with:
