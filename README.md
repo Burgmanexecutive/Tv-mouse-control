@@ -40,7 +40,8 @@ Gli APK finiscono in `phone/build/outputs/apk/debug/` e `tv/build/outputs/apk/de
 3. **Protezione:** sotto il PIN c'e' l'interruttore **"PIN richiesto"**. Con PIN attivo (consigliato) il telefono deve conoscerlo; spento, qualunque telefono nella rete puo' collegarsi (vedi sezione Sicurezza).
 4. Per **canali, spegnimento, frecce, tasti numerici, riproduzione e Wake-on-LAN** (opzionale, vedi tabella): attiva il debug ADB di rete.
    - Impostazioni > Preferenze dispositivo > Informazioni > premi 7 volte su "Build" per sbloccare le Opzioni sviluppatore.
-   - Nelle Opzioni sviluppatore attiva **Debug USB** e **Debug di rete** (su alcune TV si chiama "Debug wireless"/"ADB via rete").
+   - Nelle Opzioni sviluppatore attiva **Debug USB** (a volte "Debug ADB") e, se c'e', **Debug di rete**. Molte TV non hanno la voce di rete, e quelle con Android 11 o piu' hanno solo "Debug wireless", che richiede un abbinamento che questa app non sa fare. In quel caso usa il trucco da PC qui sotto, oppure rinuncia alle funzioni che richiedono ADB.
+   - **Trucco da PC (una tantum, si perde al riavvio della TV):** con PC e TV nella stessa rete esegui `adb connect IP_DELLA_TV:5555` (con "Debug wireless" l'indirizzo e la porta sono quelli mostrati in quella schermata, dopo `adb pair`), poi `adb tcpip 5555`. Poi nell'app TV usa "Salva e prova ADB" con porta 5555 e conferma la richiesta sulla TV.
    - Nell'app TV scrivi la porta (di solito 5555) e premi **"Salva e prova ADB"**. Quando compare la richiesta sullo schermo scegli **"Consenti sempre"**.
 
 Dopo l'attivazione dell'accessibilita' il ricevitore parte da solo anche dopo un riavvio della TV: non serve riaprire l'app.
@@ -64,6 +65,8 @@ Alla prima apertura compare il dialogo di collegamento: premi **"Cerca TV in ret
 
 **Scrivi (tastiera del telefono):** sulla TV seleziona un campo di testo col puntatore, poi premi **Scrivi**: compare una casella con la tastiera del telefono. Quello che digiti, cancelli o incolli compare subito nel campo della TV, nel punto del cursore. **Incolla** inserisce il contenuto degli appunti, **Invio** (o il tasto invio della tastiera) conferma, ad esempio per avviare una ricerca, e svuota la casella. **Azzera** svuota solo la casella sul telefono: usalo se hai modificato il testo direttamente sulla TV. Il cursore della casella resta sempre in fondo, quindi scrivi di seguito.
 
+**Timer di spegnimento:** il pulsante **Timer** (accanto a Spegni) apre la scelta dei minuti: 15, 30, 45, 60, 90, 120 oppure un numero a piacere da 1 a 720. Il timer gira **sulla TV**, quindi continua anche se il telefono si scollega; un minuto prima compare un avviso sulla TV, e sul pulsante si vede il tempo che resta. Per annullarlo riapri il pulsante e scegli "Annulla il timer". Lo spegnimento usa l'ADB se c'e'; senza ADB prova ad aprire il menu di spegnimento di Android e a cliccare "Spegni", cosa che **dipende dalla TV e non e' garantita**: prova prima con un timer di 1 minuto.
+
 **Tasti volume del telefono:** con l'app aperta e la TV collegata comandano il volume della TV (si disattiva dalle Opzioni).
 
 ### Con l'hotspot del telefono
@@ -81,7 +84,7 @@ La TV accetta un solo telefono alla volta. Se un secondo telefono si collega, il
 | Frecce e OK | in parte: sposta il focus di sistema, **non funziona in tutte le app** | si, come il telecomando fisico |
 | Menu, Ingressi, tasti 0-9, riproduzione | **no** | si |
 | Canale su/giu' | **no** | si, se e' in primo piano un'app TV in diretta che li supporta |
-| Spegnimento (standby) | **no** | si |
+| Spegnimento (standby) e timer | prova il menu di spegnimento di Android: **non garantito**, dipende dalla TV | si |
 | Scrivere testo dal telefono | si, nei campi di testo standard (accenti ed emoji compresi) | si, anche nei campi che non si lasciano modificare e nelle password, ma solo con caratteri ASCII base |
 | Elenco e avvio delle app | si; su alcune TV con Android 10 o piu' l'avvio da servizio in secondo piano puo' essere bloccato | si, piu' affidabile |
 | Wake-on-LAN | **no**: il MAC della TV non e' leggibile da un'app normale | si: il MAC viene letto via ADB al primo collegamento |

@@ -18,6 +18,18 @@ jobs:
       - name: Accetta le licenze dell'SDK Android (già installato sul runner)
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
+      - name: Usa la chiave di firma fissa (se configurata)
+        env:
+          DEBUG_KEYSTORE_B64: ${{ secrets.DEBUG_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$DEBUG_KEYSTORE_B64" ]; then
+            mkdir -p ~/.android
+            echo "$DEBUG_KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
+            echo "Chiave di firma fissa installata."
+          else
+            echo "Nessuna chiave fissa configurata: gli APK useranno una chiave temporanea."
+          fi
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'

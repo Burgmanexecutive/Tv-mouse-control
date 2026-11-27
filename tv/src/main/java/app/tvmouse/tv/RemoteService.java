@@ -20,6 +20,7 @@ import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Toast;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
@@ -109,6 +110,7 @@ public final class RemoteService extends AccessibilityService implements Connect
         server = new ConnectionServer(this, this);
         server.start();
         instance = this;
+        restoreTimer();
     }
 
     @Override
@@ -229,7 +231,12 @@ public final class RemoteService extends AccessibilityService implements Connect
             case "POWER":
                 // KEYCODE_SLEEP mette la TV in standby senza il rischio di "riaccenderla".
                 // Se sulla tua TV non funziona prova KeyEvent.KEYCODE_POWER.
-                adbKey(s, KeyEvent.KEYCODE_SLEEP);
+                main.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        powerOff();
+                    }
+                });
                 break;
             case "TEXT": {
                 if (a.length < 2) return;
@@ -276,6 +283,17 @@ public final class RemoteService extends AccessibilityService implements Connect
             case "APPS":
                 sendApps(s);
                 break;
+            case "TIMER": {
+                if (a.length < 2) return;
+                final int minutes = parseCount(a[1]);
+                main.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        setTimer(minutes);
+                    }
+                });
+                break;
+            }
             case "LAUNCH": {
                 if (a.length < 2) return;
                 final String pkg = a[1];
@@ -407,6 +425,174 @@ public final class RemoteService extends AccessibilityService implements Connect
         }
     }
 
+    // ------------------------------------------------------------ timer di spegnimento e spegnimento
+
+    private static final String TIMER_PREFS = "tvmouse_timer";
+    private static final int MAX_TIMER_MINUTES = 720;
+    private static final Pattern POWER_TEXT = Pattern.compile(
+            "(?is).*(spegni|spegnimento|power ?off|shut ?down|stand-?by|sleep|riposo).*");
+    private static final Pattern CONFIRM_TEXT = Pattern.compile(
+            "(?is)\\s*(ok|s[iì]|conferma|confirm|yes|spegni|power ?off)\\s*");
+
+    private volatile ConnectionServer.Session lastSession;
+    private volatile long timerEndAt; // millisecondi dell'orologio di sistema, 0 = nessun timer
+    private final Runnable timerWarn = new Runnable() {
+        @Override
+        public void run() {
+            Toast.makeText(RemoteService.this, "La TV si spegnerà tra 1 minuto", Toast.LENGTH_LONG).show();
+        }
+    };
+    private final Runnable timerFire = new Runnable() {
+        @Override
+        public void run() {
+            clearTimer();
+            notifyTimer();
+            powerOff();
+        }
+    };
+
+    /** minutes = 0 annulla il timer. Il timer vive sulla TV: continua anche se il telefono si scollega. */
+    private void setTimer(int minutes) {
+        if (minutes <= 0) {
+            clearTimer();
+            notifyTimer();
+            return;
+        }
+        timerEndAt = System.currentTimeMillis() + Math.min(minutes, MAX_TIMER_MINUTES) * 60000L;
+        getSharedPreferences(TIMER_PREFS, MODE_PRIVATE).edit().putLong("end", timerEndAt).apply();
+        scheduleTimer();
+        notifyTimer();
+    }
+
+    private void scheduleTimer() {
+        main.removeCallbacks(timerFire);
+        main.removeCallbacks(timerWarn);
+        long left = timerEndAt - System.currentTimeMillis();
+        if (left <= 0) {
+            main.post(timerFire);
+            return;
+        }
+        main.postDelayed(timerFire, left);
+        if (left > 60000L) main.postDelayed(timerWarn, left - 60000L);
+    }
+
+    private void clearTimer() {
+        timerEndAt = 0;
+        main.removeCallbacks(timerFire);
+        main.removeCallbacks(timerWarn);
+        getSharedPreferences(TIMER_PREFS, MODE_PRIVATE).edit().putLong("end", 0).apply();
+    }
+
+    /** Dopo il riavvio del servizio riprende un timer ancora valido (o scaduto da meno di 2 minuti). */
+    private void restoreTimer() {
+        long end = getSharedPreferences(TIMER_PREFS, MODE_PRIVATE).getLong("end", 0);
+        if (end <= 0) return;
+        long now = System.currentTimeMillis();
+        if (end > now || now - end <= 120000L) {
+            timerEndAt = end;
+            scheduleTimer();
+        } else {
+            clearTimer();
+        }
+    }
+
+    private int remainingSeconds() {
+        long end = timerEndAt;
+        if (end == 0) return 0;
+        long left = end - System.currentTimeMillis();
+        return left <= 0 ? 0 : (int) ((left + 999) / 1000);
+    }
+
+    private void notifyTimer() {
+        ConnectionServer.Session s = lastSession;
+        if (s != null) s.send("TIMER|" + remainingSeconds());
+    }
+
+    /** Spegne la TV (standby): via ADB se disponibile, altrimenti prova il menu di spegnimento di Android. */
+    private void powerOff() {
+        adb.shell("input keyevent " + KeyEvent.KEYCODE_SLEEP, new AdbBridge.Result() {
+            @Override
+            public void done(boolean ok, String code) {
+                if (ok) return;
+                main.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        powerOffWithoutAdb();
+                    }
+                });
+            }
+        });
+    }
+
+    /** Senza ADB: apre la finestra di spegnimento di sistema e clicca la voce "Spegni". Non garantito. */
+    private void powerOffWithoutAdb() {
+        if (!performGlobalAction(GLOBAL_ACTION_POWER_DIALOG)) {
+            reportPowerFailure();
+            return;
+        }
+        main.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                AccessibilityNodeInfo entry = findOnScreen(POWER_TEXT);
+                if (entry == null || !entry.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                    reportPowerFailure();
+                    return;
+                }
+                // alcune TV chiedono una conferma
+                main.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        AccessibilityNodeInfo confirm = findOnScreen(CONFIRM_TEXT);
+                        if (confirm != null) confirm.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                    }
+                }, 1000);
+            }
+        }, 1200);
+    }
+
+    private void reportPowerFailure() {
+        Toast.makeText(this, "Non sono riuscito a spegnere la TV: serve il bridge ADB.", Toast.LENGTH_LONG).show();
+        ConnectionServer.Session s = lastSession;
+        if (s != null) s.send("ERR|POWER");
+    }
+
+    /** Elemento cliccabile con quel testo nelle finestre sullo schermo (dalla più in alto). */
+    private AccessibilityNodeInfo findOnScreen(Pattern pattern) {
+        List<AccessibilityWindowInfo> windows = new ArrayList<>(getWindows());
+        Collections.sort(windows, new Comparator<AccessibilityWindowInfo>() {
+            @Override
+            public int compare(AccessibilityWindowInfo a, AccessibilityWindowInfo b) {
+                return b.getLayer() - a.getLayer();
+            }
+        });
+        for (AccessibilityWindowInfo w : windows) {
+            if (w.getType() == AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY) continue;
+            AccessibilityNodeInfo found = findByText(w.getRoot(), pattern, 0);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    private AccessibilityNodeInfo findByText(AccessibilityNodeInfo node, Pattern pattern, int depth) {
+        if (node == null || depth > 30) return null;
+        CharSequence text = node.getText();
+        CharSequence description = node.getContentDescription();
+        boolean match = (text != null && pattern.matcher(text).matches())
+                || (description != null && pattern.matcher(description).matches());
+        if (match) {
+            AccessibilityNodeInfo n = node;
+            for (int i = 0; i < 4 && n != null; i++) {
+                if (n.isClickable()) return n;
+                n = n.getParent();
+            }
+        }
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo found = findByText(node.getChild(i), pattern, depth + 1);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
     // ------------------------------------------------------------ elemento sotto al puntatore
 
     private static final int MODE_CLICK = 0;
@@ -471,6 +657,9 @@ public final class RemoteService extends AccessibilityService implements Connect
 
     @Override
     public void onSessionStart(final ConnectionServer.Session s) {
+        lastSession = s;
+        s.send("TIMER|" + remainingSeconds()); // il telefono mostra il timer eventualmente già in corso
+
         // Legge l'indirizzo MAC (serve al telefono per Wake-on-LAN). Funziona solo con ADB attivo.
         adb.shellOutput("cat /sys/class/net/wlan0/address 2>/dev/null; "
                 + "cat /sys/class/net/eth0/address 2>/dev/null; true", new AdbBridge.Output() {
@@ -497,12 +686,29 @@ public final class RemoteService extends AccessibilityService implements Connect
             main.post(new Runnable() {
                 @Override
                 public void run() {
+                    // Android 13+: tasti direzionali veri, funzionano anche in YouTube e nelle app per TV.
+                    if (Build.VERSION.SDK_INT >= 33 && dpadGlobal(code)) return;
                     focusMove(code);
                 }
             });
             return;
         }
         adbKey(s, code);
+    }
+
+    /** Frecce/OK tramite azioni globali di accessibilità (API 33+). */
+    private boolean dpadGlobal(int code) {
+        if (Build.VERSION.SDK_INT < 33) return false;
+        int action;
+        switch (code) {
+            case KeyEvent.KEYCODE_DPAD_UP: action = GLOBAL_ACTION_DPAD_UP; break;
+            case KeyEvent.KEYCODE_DPAD_DOWN: action = GLOBAL_ACTION_DPAD_DOWN; break;
+            case KeyEvent.KEYCODE_DPAD_LEFT: action = GLOBAL_ACTION_DPAD_LEFT; break;
+            case KeyEvent.KEYCODE_DPAD_RIGHT: action = GLOBAL_ACTION_DPAD_RIGHT; break;
+            case KeyEvent.KEYCODE_DPAD_CENTER: action = GLOBAL_ACTION_DPAD_CENTER; break;
+            default: return false;
+        }
+        return performGlobalAction(action);
     }
 
     /** Senza ADB: sposta il focus di sistema (o clicca l'elemento selezionato). Non funziona in tutte le app. */

@@ -9,6 +9,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.InputType;
@@ -66,6 +67,10 @@ public final class MainActivity extends Activity {
     private String prevText = "";
     private boolean suppressSync;
     private long lastTextToast;
+
+    // timer di spegnimento
+    private Button timerButton;
+    private long timerEndLocal; // SystemClock.elapsedRealtime() di scadenza, 0 = nessun timer
 
     // schede
     private final View[] panels = new View[4];
@@ -196,6 +201,15 @@ public final class MainActivity extends Activity {
                 suppressReconnect = true;
                 toastLong("Un altro telefono si è collegato alla TV.");
                 break;
+            case "TIMER":
+                if (a.length >= 2) {
+                    try {
+                        applyTimerFromTv(Integer.parseInt(a[1].trim()));
+                    } catch (NumberFormatException ignored) {
+                        // messaggio non valido
+                    }
+                }
+                break;
             case "ERR":
                 handleError(a.length >= 2 ? a[1] : "");
                 break;
@@ -218,6 +232,9 @@ public final class MainActivity extends Activity {
                     lastTextToast = now;
                     toastLong("Questo campo accetta solo caratteri base: accenti, emoji e alcuni simboli sono stati saltati.");
                 }
+                break;
+            case "POWER":
+                toastLong("La TV non si è spenta: senza il bridge ADB lo spegnimento non è garantito e dipende dalla TV.");
                 break;
             case "ADB_OFF":
                 toastLong("Sulla TV il bridge ADB non è attivo: abilita il debug di rete nelle Opzioni sviluppatore (vedi guida).");
@@ -287,10 +304,25 @@ public final class MainActivity extends Activity {
                 key("VOL −", "VOLDOWN", true),
                 key("MUTE", "MUTE", false),
                 key("VOL +", "VOLUP", true)));
-        root.addView(row(52,
-                key("Indietro", "BACK", false),
-                key("Home", "HOME", false),
-                powerKey()));
+        Button back = key("Indietro", "BACK", false);
+        Button home = key("Home", "HOME", false);
+        timerButton = new Button(this);
+        timerButton.setAllCaps(false);
+        timerButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showTimerDialog();
+            }
+        });
+        Button power = powerKey();
+        for (Button b : new Button[]{back, home, timerButton, power}) {
+            b.setTextSize(14);
+            b.setMinWidth(0);
+            b.setMinimumWidth(0);
+            b.setPadding(dp(4), 0, dp(4), 0);
+        }
+        root.addView(row(52, back, home, timerButton, power));
+        updateTimerButton();
 
         // barra di scrittura (nascosta finché non premi "Scrivi")
         textBar = new LinearLayout(this);
@@ -869,6 +901,125 @@ public final class MainActivity extends Activity {
             client.send("TEXT|" + Base64.encodeToString(piece.getBytes(StandardCharsets.UTF_8), Base64.NO_WRAP));
             i = end;
         }
+    }
+
+    // ------------------------------------------------------------ timer di spegnimento
+
+    private final Runnable timerTick = new Runnable() {
+        @Override
+        public void run() {
+            updateTimerButton();
+            if (timerEndLocal > 0) handler.postDelayed(this, 15000);
+        }
+    };
+
+    private int timerSecondsLeft() {
+        if (timerEndLocal == 0) return 0;
+        long left = timerEndLocal - SystemClock.elapsedRealtime();
+        return left <= 0 ? 0 : (int) ((left + 999) / 1000);
+    }
+
+    /** La TV comunica quanti secondi mancano allo spegnimento (0 = nessun timer). */
+    private void applyTimerFromTv(int seconds) {
+        timerEndLocal = seconds > 0 ? SystemClock.elapsedRealtime() + seconds * 1000L : 0;
+        handler.removeCallbacks(timerTick);
+        updateTimerButton();
+        if (timerEndLocal > 0) handler.postDelayed(timerTick, 15000);
+    }
+
+    private void updateTimerButton() {
+        if (timerButton == null) return;
+        int s = timerSecondsLeft();
+        if (s <= 0) {
+            timerEndLocal = 0;
+            timerButton.setText("Timer");
+        } else {
+            timerButton.setText("Timer " + ((s + 59) / 60) + "m");
+        }
+    }
+
+    private void showTimerDialog() {
+        if (state != RemoteClient.State.CONNECTED) {
+            Toast.makeText(this, "Collegati prima a una TV", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        final int[] presets = {15, 30, 45, 60, 90, 120};
+        final boolean active = timerSecondsLeft() > 0;
+        List<String> items = new ArrayList<>();
+        if (active) items.add("Annulla il timer (restano " + ((timerSecondsLeft() + 59) / 60) + " min)");
+        for (int m : presets) items.add("Spegni tra " + describeMinutes(m));
+        items.add("Altro numero di minuti...");
+
+        new AlertDialog.Builder(this)
+                .setTitle("Timer di spegnimento")
+                .setItems(items.toArray(new String[0]), new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface d, int which) {
+                        if (active && which == 0) {
+                            setTvTimer(0);
+                            return;
+                        }
+                        int index = active ? which - 1 : which;
+                        if (index < presets.length) {
+                            setTvTimer(presets[index]);
+                        } else {
+                            showCustomTimerDialog();
+                        }
+                    }
+                })
+                .show();
+    }
+
+    private void showCustomTimerDialog() {
+        final EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER);
+        input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(3)});
+        input.setHint("Minuti (da 1 a 720)");
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(20);
+        box.setPadding(pad, dp(8), pad, 0);
+        box.addView(input);
+
+        final AlertDialog d = new AlertDialog.Builder(this)
+                .setTitle("Spegni la TV tra...")
+                .setView(box)
+                .setPositiveButton("Imposta", null)
+                .setNegativeButton("Annulla", null)
+                .create();
+        d.show();
+        d.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                int minutes;
+                try {
+                    minutes = Integer.parseInt(input.getText().toString().trim());
+                } catch (NumberFormatException e) {
+                    minutes = 0;
+                }
+                if (minutes < 1 || minutes > 720) {
+                    Toast.makeText(MainActivity.this, "Inserisci un numero da 1 a 720", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                d.dismiss();
+                setTvTimer(minutes);
+            }
+        });
+    }
+
+    private void setTvTimer(int minutes) {
+        client.send("TIMER|" + minutes);
+        Toast.makeText(this, minutes == 0
+                ? "Timer annullato"
+                : "La TV si spegnerà tra " + describeMinutes(minutes), Toast.LENGTH_SHORT).show();
+    }
+
+    private static String describeMinutes(int m) {
+        if (m < 60) return m == 1 ? "1 minuto" : m + " minuti";
+        int hours = m / 60;
+        int rest = m % 60;
+        String h = hours == 1 ? "1 ora" : hours + " ore";
+        return rest == 0 ? h : h + " e " + rest + " minuti";
     }
 
     // ------------------------------------------------------------ elenco TV e collegamento
