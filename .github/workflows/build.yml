@@ -43,3 +43,26 @@ jobs:
           path: |
             phone/build/outputs/apk/debug/*.apk
             tv/build/outputs/apk/debug/*.apk
+
+  desktop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Compila il programma per PC (JAR eseguibile)
+        run: |
+          mkdir -p out dist
+          javac --release 11 -d out shared/src/main/java/app/tvmouse/common/*.java desktop/src/main/java/app/tvmouse/desktop/*.java
+          printf 'Main-Class: app.tvmouse.desktop.Main\n' > manifest.txt
+          jar --create --file dist/TvMouse-PC.jar --manifest manifest.txt -C out .
+          cp desktop/Avvia-TvMouse.bat desktop/Avvia-TvMouse.command desktop/Avvia-TvMouse.sh dist/
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: tvmouse-pc
+          path: dist/*

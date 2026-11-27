@@ -75,6 +75,19 @@ Attiva l'hotspot, collega la TV a quella rete e apri le due app: la ricerca prov
 ### Piu' telefoni
 La TV accetta un solo telefono alla volta. Se un secondo telefono si collega, il primo riceve l'avviso e non si riconnette da solo (cosi' non si "rubano" la TV a vicenda).
 
+## 4b. Uso da PC o notebook (Windows, macOS, Linux)
+
+Oltre al telefono puoi comandare la TV dal computer, con lo stesso PIN e la stessa cifratura.
+
+1. Scarica da **Actions > ultima esecuzione > Artifacts** il pacchetto `tvmouse-pc` e decomprimilo.
+2. Serve Java 11 o successivo (gratis da https://adoptium.net).
+3. Avvia con `Avvia-TvMouse.bat` (Windows), `Avvia-TvMouse.command` (macOS, doppio clic) o `Avvia-TvMouse.sh` (Linux). In alternativa: `java -jar TvMouse-PC.jar`.
+4. Premi **Cerca TV** (oppure scrivi l'IP mostrato sulla TV), inserisci il PIN e premi **Connetti**. Il programma ricorda l'ultima TV.
+
+Il PC deve essere nella stessa rete della TV (anche l'hotspot del telefono va bene).
+
+Comandi: trascina nel trackpad per muovere il puntatore, clic = tocco, tieni premuto = pressione lunga, rotellina = scorri, tasto destro = Indietro. Con il focus fuori dalle caselle di testo, frecce / Invio / Esc / Home / PagSu / PagGiù della tastiera comandano la TV. Le schede Frecce, Numeri e App e la casella di scrittura funzionano come sul telefono.
+
 ## 5. Cosa funziona senza ADB e cosa no
 
 | Funzione | Senza ADB | Con ADB attivo sulla TV |
