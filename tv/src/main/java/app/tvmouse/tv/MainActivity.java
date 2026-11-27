@@ -3,6 +3,9 @@ package app.tvmouse.tv;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.StateListDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -89,6 +92,9 @@ public final class MainActivity extends Activity {
         portField.setInputType(InputType.TYPE_CLASS_NUMBER);
         portField.setText(String.valueOf(Prefs.adbPort(this)));
         portField.setTextSize(22);
+        portField.setBackground(shape(Color.WHITE, Color.parseColor("#1565C0"), 3));
+        portField.setTextColor(Color.BLACK);
+        portField.setPadding(dp(12), dp(8), dp(12), dp(8));
         row.addView(portField, new LinearLayout.LayoutParams(dp(160), ViewGroup.LayoutParams.WRAP_CONTENT));
         Button test = button("Salva e prova ADB", new View.OnClickListener() {
             @Override
@@ -183,11 +189,61 @@ public final class MainActivity extends Activity {
         b.setAllCaps(false);
         b.setTextSize(20);
         b.setOnClickListener(l);
+        styleButton(b);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.topMargin = dp(12);
         b.setLayoutParams(lp);
         return b;
+    }
+
+    private GradientDrawable shape(int fill, int stroke, int strokeDp) {
+        GradientDrawable g = new GradientDrawable();
+        g.setColor(fill);
+        g.setCornerRadius(dp(10));
+        g.setStroke(dp(strokeDp), stroke);
+        return g;
+    }
+
+    /** Blu scuro a riposo; giallo acceso con bordo bianco e ingrandito quando selezionato (frecce/mouse). */
+    private void styleButton(final Button b) {
+        GradientDrawable rest = shape(Color.parseColor("#1565C0"), Color.parseColor("#90CAF9"), 2);
+        GradientDrawable active = shape(Color.parseColor("#FFD600"), Color.WHITE, 5);
+        GradientDrawable pressed = shape(Color.parseColor("#FF6D00"), Color.WHITE, 5);
+        StateListDrawable sl = new StateListDrawable();
+        sl.addState(new int[]{android.R.attr.state_pressed}, pressed);
+        sl.addState(new int[]{android.R.attr.state_focused}, active);
+        sl.addState(new int[]{android.R.attr.state_hovered}, active);
+        sl.addState(new int[]{}, rest);
+        b.setBackground(sl);
+        b.setPadding(dp(24), dp(12), dp(24), dp(12));
+        b.setFocusable(true);
+        b.setTextColor(new android.content.res.ColorStateList(
+                new int[][]{
+                        new int[]{android.R.attr.state_pressed},
+                        new int[]{android.R.attr.state_focused},
+                        new int[]{android.R.attr.state_hovered},
+                        new int[]{}},
+                new int[]{Color.BLACK, Color.BLACK, Color.BLACK, Color.WHITE}));
+        View.OnFocusChangeListener grow = new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean has) {
+                v.animate().scaleX(has ? 1.06f : 1f).scaleY(has ? 1.06f : 1f).setDuration(100).start();
+            }
+        };
+        b.setOnFocusChangeListener(grow);
+        b.setOnHoverListener(new View.OnHoverListener() {
+            @Override
+            public boolean onHover(View v, android.view.MotionEvent e) {
+                int a = e.getActionMasked();
+                if (a == android.view.MotionEvent.ACTION_HOVER_ENTER) {
+                    v.animate().scaleX(1.06f).scaleY(1.06f).setDuration(100).start();
+                } else if (a == android.view.MotionEvent.ACTION_HOVER_EXIT) {
+                    v.animate().scaleX(1f).scaleY(1f).setDuration(100).start();
+                }
+                return false;
+            }
+        });
     }
 
     private int dp(int v) {
