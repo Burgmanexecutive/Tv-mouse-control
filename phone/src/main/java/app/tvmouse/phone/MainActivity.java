@@ -265,42 +265,46 @@ public final class MainActivity extends Activity {
         int p = dp(12);
         root.setPadding(p, dp(12), p, p);
 
-        // barra in alto: stato + Scrivi + Opzioni + TV
-        LinearLayout top = new LinearLayout(this);
-        top.setOrientation(LinearLayout.HORIZONTAL);
-        top.setGravity(Gravity.CENTER_VERTICAL);
+        // riga in alto: solo lo stato della connessione, a tutta larghezza
         statusView = new TextView(this);
         statusView.setTextSize(15);
         statusView.setTextColor(0xFFBBBBBB);
-        statusView.setSingleLine(true);
+        statusView.setMaxLines(2);
         statusView.setEllipsize(TextUtils.TruncateAt.END);
         statusView.setText("Non connesso");
-        top.addView(statusView, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        top.addView(smallButton("Scrivi", new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                toggleTextBar();
-            }
-        }));
-        top.addView(smallButton("Opzioni", new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showOptions();
-            }
-        }));
-        top.addView(smallButton("TV", new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showTvList();
-            }
-        }));
-        root.addView(top);
+        root.addView(statusView, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        // tutti i tasti stanno in fondo, sotto al trackpad
+        LinearLayout bottom = new LinearLayout(this);
+        bottom.setOrientation(LinearLayout.VERTICAL);
+
+        // Scrivi + Opzioni + TV
+        bottom.addView(row(48,
+                smallButton("Scrivi", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        toggleTextBar();
+                    }
+                }),
+                smallButton("Opzioni", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        showOptions();
+                    }
+                }),
+                smallButton("TV", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        showTvList();
+                    }
+                })));
 
         // tasti sempre visibili
-        root.addView(row(52,
+        bottom.addView(row(60,
                 key("CH −", "CHDOWN", false),
                 key("CH +", "CHUP", false)));
-        root.addView(row(52,
+        bottom.addView(row(60,
                 key("VOL −", "VOLDOWN", true),
                 key("MUTE", "MUTE", false),
                 key("VOL +", "VOLUP", true)));
@@ -321,7 +325,7 @@ public final class MainActivity extends Activity {
             b.setMinimumWidth(0);
             b.setPadding(dp(4), 0, dp(4), 0);
         }
-        root.addView(row(52, back, home, timerButton, power));
+        bottom.addView(row(60, back, home, timerButton, power));
         updateTimerButton();
 
         // barra di scrittura (nascosta finché non premi "Scrivi")
@@ -383,7 +387,7 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams barLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         barLp.topMargin = dp(6);
-        root.addView(textBar, barLp);
+        final LinearLayout.LayoutParams textBarLp = barLp;
 
         // linguette
         String[] tabNames = {"Mouse", "Frecce", "Numeri", "App"};
@@ -426,6 +430,8 @@ public final class MainActivity extends Activity {
             host.addView(panel, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         }
+        root.addView(textBar, textBarLp); // sopra ai tasti, sotto al trackpad
+        root.addView(bottom);
         return root;
     }
 
