@@ -37,7 +37,7 @@ jobs:
       - name: Compila gli APK (telefono + TV)
         run: gradle assembleDebug
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: tvmouse-apk
           path: |
