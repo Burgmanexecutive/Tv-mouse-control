@@ -619,6 +619,9 @@ public final class MainActivity extends Activity {
         b.setTextSize(14);
         b.setSingleLine(true);
         b.setEllipsize(TextUtils.TruncateAt.END);
+        // colore diverso dai tasti delle funzioni: le app sono verde acqua con testo bianco
+        b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF00897B));
+        b.setTextColor(0xFFFFFFFF);
         b.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
