@@ -52,6 +52,8 @@ public final class MainActivity extends Activity {
 
         root.addView(text("TV Mouse - ricevitore", 34));
         ipView = text("", 24);
+        ipView.setTextColor(Color.parseColor("#FFEA00")); // giallo acceso: l'IP si legge bene da lontano
+        ipView.setTypeface(ipView.getTypeface(), android.graphics.Typeface.BOLD);
         pinView = text("", 40);
         serviceView = text("", 24);
         adbView = text("", 22);
